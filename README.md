@@ -15,19 +15,21 @@ npm run dev
 
 Abra http://localhost:3000
 
-## Banco de dados
+## Banco de dados local
 
-O projeto usa Prisma 7 com PostgreSQL. Para configurar o Supabase:
-
-1. Copie `.env.example` para `.env` e preencha as URLs do projeto Supabase.
-2. Use a URL de pool (Supavisor) em `DATABASE_URL` para a aplicação e a URL direta em `DIRECT_URL` para migrations.
-3. Crie/atualize o schema no banco:
+Configure o ambiente local e inicie o PostgreSQL:
 
 ```bash
+cp -n .env.example .env.local
+docker compose up -d
 npm run db:migrate
 ```
 
-O Prisma Client é gerado automaticamente durante `npm install`. Nunca exponha essas URLs em componentes client-side nem envie o arquivo `.env` ao Git.
+`docker compose up -d` inicia o banco; `npm run db:migrate` cria ou atualiza as tabelas. As configurações ficam em `.env.local`, que não é enviado ao Git.
+
+Em produção, configure `DATABASE_URL` e `DIRECT_URL` no painel da plataforma de deploy, sem criar ou commitar um arquivo de ambiente de produção. Para Supabase, use a URL de pool (Supavisor) em `DATABASE_URL` e a URL direta em `DIRECT_URL` para migrations.
+
+O Prisma Client é gerado automaticamente durante `npm install`. Nunca exponha essas URLs em componentes client-side.
 
 ## Andamento do Projeto
 
