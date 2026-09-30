@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Coleta {
+  id          String        @id @default(cuid())
+  nome        String
+  telefone    String
+  material    String
+  horario     String
+  endereco    String
+  status      StatusColeta  @default(PENDENTE)
+  criadoEm    DateTime      @default(now())
+  atualizadoEm DateTime     @updatedAt
+}
+
+enum StatusColeta {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDA
+}

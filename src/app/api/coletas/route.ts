@@ -1,3 +1,5 @@
+import { getPrismaClient } from "@/lib/prisma";
+
 function getText(form: FormData, name: string): string {
   const value = form.get(name);
 
@@ -35,9 +37,22 @@ export async function POST(request: Request) {
     );
   }
 
-  return Response.json({
-    ok: true,
-    saved: false,
-    message: "Dados validados, mas o armazenamento ainda não foi configurado.",
-  });
+  try {
+    const coleta = await getPrismaClient().coleta.create({ data });
+
+    return Response.json(
+      {
+        ok: true,
+        saved: true,
+        id: coleta.id,
+        message: "Solicitação de coleta registrada com sucesso.",
+      },
+      { status: 201 },
+    );
+  } catch {
+    return Response.json(
+      { error: "Não foi possível registrar a solicitação de coleta." },
+      { status: 500 },
+    );
+  }
 }
