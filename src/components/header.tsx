@@ -7,6 +7,13 @@ export function Header() {
         <Link href="/" className="font-semibold">
           ReciclaAqui
         </Link>
+
+        <Link
+          href="/login"
+          className="text-sm font-medium text-green-800 hover:text-green-900"
+        >
+          Entrar
+        </Link>
       </div>
     </header>
   );
