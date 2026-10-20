@@ -28,6 +28,8 @@ export async function POST(request: Request) {
     material: getText(form, "material"),
     horario: getText(form, "horario"),
     endereco: getText(form, "endereco"),
+    cidade: getText(form, "cidade"),
+    estado: getText(form, "estado").toUpperCase(),
   };
 
   if (Object.values(data).some((value) => !value)) {

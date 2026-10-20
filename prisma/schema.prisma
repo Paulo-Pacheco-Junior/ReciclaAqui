@@ -14,9 +14,23 @@ model Coleta {
   material    String
   horario     String
   endereco    String
+  cidade      String?
+  estado      String?
   status      StatusColeta  @default(PENDENTE)
+  cooperativaId String?
   criadoEm    DateTime      @default(now())
   atualizadoEm DateTime     @updatedAt
+  cooperativa Cooperativa? @relation(fields: [cooperativaId], references: [id], onDelete: SetNull)
+
+  @@index([cooperativaId])
+}
+
+model Cooperativa {
+  id         String   @id @default(cuid())
+  authUserId String   @unique
+  nome       String
+  criadoEm   DateTime @default(now())
+  coletas    Coleta[]
 }
 
 enum StatusColeta {

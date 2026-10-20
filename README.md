@@ -31,6 +31,18 @@ Em produção, configure `DATABASE_URL` e `DIRECT_URL` no painel da plataforma d
 
 O Prisma Client é gerado automaticamente durante `npm install`. Nunca exponha essas URLs em componentes client-side.
 
+## Acesso das cooperativas
+
+O login e o cadastro usam Supabase Auth. Além das URLs do banco, configure em `.env.local` a URL do projeto, a chave publishable e a URL local da aplicação:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL="https://seu-projeto.supabase.co"
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="sua-chave-publishable"
+NEXT_PUBLIC_SITE_URL="http://localhost:3000"
+```
+
+Encontre a URL e a chave publishable nos dados da API do projeto Supabase. Em **Authentication > URL Configuration**, adicione `http://localhost:3000/auth/callback` como URL de redirecionamento permitida. Para aplicar as migrations pendentes no banco remoto, use `npx prisma migrate deploy`.
+
 ## Andamento do Projeto
 
 Rascunho (para finalizar):

@@ -108,6 +108,50 @@ export function ColetaForm() {
         />
       </div>
 
+      <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-4">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="cidade" className="text-sm font-medium text-neutral-700">
+            Cidade
+          </label>
+          <input
+            type="text"
+            id="cidade"
+            name="cidade"
+            required
+            autoComplete="address-level2"
+            placeholder="Ex: Porto Alegre"
+            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-600"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="estado" className="text-sm font-medium text-neutral-700">
+            UF
+          </label>
+          <select
+            id="estado"
+            name="estado"
+            required
+            autoComplete="address-level1"
+            defaultValue=""
+            className="rounded-lg border border-neutral-300 bg-white px-2 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-600"
+          >
+            <option value="" disabled>
+              UF
+            </option>
+            {[
+              "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
+              "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI",
+              "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+            ].map((uf) => (
+              <option key={uf} value={uf}>
+                {uf}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor="endereco"
@@ -120,7 +164,7 @@ export function ColetaForm() {
           name="endereco"
           rows={3}
           required
-          placeholder="Rua, número, bairro, cidade e CEP"
+          placeholder="Rua, número, bairro e CEP"
           className="resize-none rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-600"
         />
       </div>
