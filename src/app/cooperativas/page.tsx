@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import { MapIcon, PhoneIcon, PinIcon } from "@/components/icons";
 
 // Importação dinâmica do mapa desativando o SSR (Server-Side Rendering)
 const MapaDinamico = dynamic(() => import("./Mapa"), { ssr: false });
@@ -276,7 +277,7 @@ export default function CooperativasPage() {
   });
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-12">
+    <div className="mx-auto max-w-5xl px-4 py-12">
       {/* Cabeçalho / Hero Section */}
       <div className="text-center max-w-3xl mx-auto mb-12">
         <span className="inline-block rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 mb-4">
@@ -296,7 +297,7 @@ export default function CooperativasPage() {
             placeholder="Pesquise por cidade (ex: Porto Alegre), estado (ex: RS) ou nome..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            className="w-full rounded-2xl border border-neutral-300 bg-white px-5 py-4 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 shadow-md transition-all"
+            className="w-full rounded-2xl border border-campo bg-cartao px-5 py-4 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 shadow-md transition-all"
           />
         </div>
       </div>
@@ -306,40 +307,60 @@ export default function CooperativasPage() {
 
       {/* Resultados em Cards */}
       {cooperativasFiltradas.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-neutral-300 p-10 text-center bg-white shadow-sm">
+        <div className="rounded-2xl border border-dashed border-campo p-10 text-center bg-cartao shadow-sm">
           <p className="text-neutral-500">Nenhuma cooperativa encontrada para &quot;{busca}&quot;.</p>
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2">
           {cooperativasFiltradas.map((item, index) => (
-            <div 
-              key={index} 
-              className="flex flex-col justify-between rounded-2xl border border-neutral-200 p-6 shadow-sm transition-all hover:shadow-md hover:border-emerald-200 bg-white"
+            <article
+              key={index}
+              className="flex flex-col rounded-2xl border border-borda bg-cartao p-6 shadow-sm transition-shadow hover:shadow-md"
             >
-              <div>
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <h2 className="font-bold text-lg text-neutral-900 leading-snug">{item.nome}</h2>
-                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 border border-emerald-100 shrink-0">
-                    {item.cidade} - {item.estado}
-                  </span>
-                </div>
-                
-                <p className="text-sm text-neutral-600 flex items-start gap-2 mt-2">
-                  <span className="text-emerald-600 font-semibold shrink-0">Endereço:</span> 
-                  <span>{item.endereco}</span>
-                </p>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-neutral-100 flex items-center justify-between text-sm">
-                <span className="text-neutral-500 font-medium">Contato:</span>
-                <span className={`font-semibold ${item.telefone ? "text-neutral-800" : "text-neutral-400 italic"}`}>
-                  {item.telefone ? item.telefone : "Não informado"}
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-lg font-bold leading-snug text-neutral-900">{item.nome}</h2>
+                <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                  {item.cidade} - {item.estado}
                 </span>
               </div>
-            </div>
+
+              <p className="mt-3 flex items-start gap-2 text-sm text-neutral-600">
+                <PinIcon className="mt-0.5 size-4 text-emerald-700" />
+                {item.endereco}
+              </p>
+
+              {/* Ações lado a lado: ligar (quando tem telefone) e abrir a rota no mapa. */}
+              <div className="mt-auto pt-4">
+              <div className="flex flex-wrap gap-2 border-t border-borda/60 pt-4">
+                {item.telefone ? (
+                  <a
+                    href={`tel:+55${item.telefone.replace(/\D/g, "")}`}
+                    className="inline-flex min-w-fit flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-campo px-3 py-2 text-sm font-semibold text-neutral-800 transition-colors hover:border-emerald-600 hover:text-emerald-800"
+                  >
+                    <PhoneIcon className="size-4" />
+                    {item.telefone}
+                  </a>
+                ) : (
+                  <span className="inline-flex min-w-fit flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-dashed border-borda px-3 py-2 text-sm text-neutral-500">
+                    <PhoneIcon className="size-4" />
+                    Sem telefone
+                  </span>
+                )}
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-w-fit flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-800"
+                >
+                  <MapIcon className="size-4" />
+                  Como chegar
+                </a>
+              </div>
+              </div>
+            </article>
           ))}
         </div>
       )}
-    </main>
+    </div>
   );
 }

@@ -1,18 +1,69 @@
-import { signOut } from "@/app/actions/auth";
-import { claimColeta, updateColetaStatus } from "@/app/actions/coletas";
+import { isUf, ufs } from "@/lib/coleta";
 import { getCurrentCooperativa } from "@/lib/cooperativa";
 import { getPrismaClient } from "@/lib/prisma";
+import Form from "next/form";
+import { cookies } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AutoRefresh } from "./auto-refresh";
+import { AvailableCard, ClaimedCard } from "./coleta-card";
 
 type KanbanPageProps = {
-  searchParams: Promise<{ aviso?: string }>;
+  searchParams: Promise<{ uf?: string; cidade?: string; coluna?: string }>;
 };
 
-const columns = [
-  { status: "PENDENTE", title: "Disponíveis" },
-  { status: "EM_ANDAMENTO", title: "Em andamento" },
-  { status: "CONCLUIDA", title: "Concluídas" },
-] as const;
+const RECENT_COMPLETED = 20;
+
+const controlClass =
+  "h-9 rounded-md border border-campo bg-cartao px-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-600";
+
+function FilterForm({ uf, cidade }: { uf: string; cidade: string }) {
+  return (
+    // A key recria o formulário quando o filtro muda (por exemplo, em "Limpar").
+    <Form
+      key={`${uf}|${cidade}`}
+      action="/kanban"
+      aria-label="Filtrar disponíveis"
+      className="flex items-center gap-1.5 lg:mt-2"
+    >
+      <label htmlFor="filtro-uf" className="sr-only">
+        UF
+      </label>
+      <select id="filtro-uf" name="uf" defaultValue={uf} className={`${controlClass} w-20`}>
+        <option value="">UF</option>
+        {ufs.map((sigla) => (
+          <option key={sigla} value={sigla}>
+            {sigla}
+          </option>
+        ))}
+      </select>
+      <label htmlFor="filtro-cidade" className="sr-only">
+        Cidade
+      </label>
+      <input
+        id="filtro-cidade"
+        name="cidade"
+        defaultValue={cidade}
+        placeholder="Cidade"
+        className={`${controlClass} min-w-0 flex-1`}
+      />
+      <button
+        type="submit"
+        className="h-9 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white hover:bg-emerald-800"
+      >
+        Filtrar
+      </button>
+      {(uf || cidade) && (
+        <Link
+          href="/kanban"
+          className="px-1 text-xs font-medium text-neutral-600 underline hover:text-neutral-900"
+        >
+          Limpar
+        </Link>
+      )}
+    </Form>
+  );
+}
 
 export default async function KanbanPage({ searchParams }: KanbanPageProps) {
   const cooperativa = await getCurrentCooperativa();
@@ -21,146 +72,207 @@ export default async function KanbanPage({ searchParams }: KanbanPageProps) {
     redirect("/login");
   }
 
-  const [{ aviso }, coletas] = await Promise.all([
-    searchParams,
-    getPrismaClient().coleta.findMany({
+  const [params, cookieStore] = await Promise.all([searchParams, cookies()]);
+  const uf = typeof params.uf === "string" && isUf(params.uf) ? params.uf : "";
+  const cidade = typeof params.cidade === "string" ? params.cidade.trim() : "";
+  const aviso = cookieStore.get("aviso")?.value;
+
+  const prisma = getPrismaClient();
+  const mine = { cooperativaId: cooperativa.id };
+
+  const [available, inProgress, completed, completedTotal] = await Promise.all([
+    prisma.coleta.findMany({
       where: {
-        OR: [
-          { status: "PENDENTE", cooperativaId: null },
-          { cooperativaId: cooperativa.id },
-        ],
+        status: "PENDENTE",
+        cooperativaId: null,
+        estado: uf || undefined,
+        cidade: cidade ? { contains: cidade, mode: "insensitive" } : undefined,
+      },
+      // Nome, telefone e endereço só aparecem depois que a cooperativa escolhe coletar.
+      select: {
+        id: true,
+        material: true,
+        horario: true,
+        cidade: true,
+        estado: true,
+        criadoEm: true,
       },
       orderBy: { criadoEm: "asc" },
     }),
+    prisma.coleta.findMany({
+      where: { ...mine, status: "EM_ANDAMENTO" },
+      orderBy: { criadoEm: "asc" },
+    }),
+    prisma.coleta.findMany({
+      where: { ...mine, status: "CONCLUIDA" },
+      orderBy: { atualizadoEm: "desc" },
+      take: RECENT_COMPLETED,
+    }),
+    prisma.coleta.count({ where: { ...mine, status: "CONCLUIDA" } }),
   ]);
 
   const avisoTexto =
     aviso === "ocupada"
-      ? "Outra cooperativa já assumiu essa solicitação."
+      ? "Outra cooperativa já vai coletar esse pedido."
       : aviso === "erro"
         ? "Não foi possível atualizar a solicitação. Tente novamente."
         : null;
 
+  const columns = [
+    {
+      id: "disponiveis",
+      title: "Disponíveis",
+      dot: "bg-amber-500",
+      total: available.length,
+      cards: available.map((coleta) => (
+        <AvailableCard key={coleta.id} coleta={coleta} />
+      )),
+      empty:
+        uf || cidade
+          ? "Nenhuma solicitação disponível com esse filtro."
+          : "Nenhuma solicitação disponível.",
+    },
+    {
+      id: "em-andamento",
+      title: "Em andamento",
+      dot: "bg-emerald-600",
+      total: inProgress.length,
+      cards: inProgress.map((coleta) => (
+        <ClaimedCard key={coleta.id} coleta={coleta} cooperativaNome={cooperativa.nome} />
+      )),
+      empty: "Escolha um pedido disponível para coletar e ele aparece aqui.",
+    },
+    {
+      id: "concluidas",
+      title: "Concluídas",
+      dot: "bg-neutral-400",
+      total: completedTotal,
+      cards: completed.map((coleta) => (
+        <ClaimedCard key={coleta.id} coleta={coleta} cooperativaNome={cooperativa.nome} />
+      )),
+      note:
+        completedTotal > completed.length
+          ? `Mostrando as ${completed.length} mais recentes.`
+          : undefined,
+      empty: "Nenhuma coleta concluída ainda.",
+    },
+  ];
+
+  // No celular aparece uma coluna por vez, escolhida nas abas; no monitor, as três.
+  const activeColumn = columns.some((column) => column.id === params.coluna)
+    ? params.coluna
+    : "disponiveis";
+
+  function columnHref(id: string) {
+    const query = new URLSearchParams();
+    if (uf) query.set("uf", uf);
+    if (cidade) query.set("cidade", cidade);
+    if (id !== "disponiveis") query.set("coluna", id);
+    const search = query.toString();
+    return search ? `/kanban?${search}` : "/kanban";
+  }
+
   return (
-    <div className="min-h-[calc(100vh-72px)] bg-[#f5f7f1] px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        <header className="flex flex-wrap items-end justify-between gap-4 border-b border-emerald-950/20 pb-6">
-          <div>
-            <p className="text-sm font-medium text-emerald-800">Painel da cooperativa</p>
-            <h1 className="mt-1 text-3xl font-semibold text-emerald-950">
-              {cooperativa.nome}
-            </h1>
-          </div>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="border border-neutral-400 px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-white"
-            >
-              Sair
-            </button>
-          </form>
+    <div className="min-h-[calc(100dvh-var(--header-height))] px-4 py-4 sm:px-6 lg:flex lg:h-[calc(100dvh-var(--header-height))] lg:flex-col lg:px-8">
+      <AutoRefresh />
+
+      <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 lg:min-h-0 lg:flex-1">
+        <header>
+          <p className="text-xs font-medium uppercase tracking-wide text-emerald-800">
+            Painel da cooperativa
+          </p>
+          <h1 className="text-xl font-semibold text-emerald-950 sm:text-2xl">
+            {cooperativa.nome}
+          </h1>
         </header>
 
-        <div className="flex flex-wrap items-baseline justify-between gap-2 py-6">
-          <h2 className="text-xl font-semibold text-neutral-900">Solicitações de coleta</h2>
-          <p className="text-sm text-neutral-600">
-            {coletas.length} {coletas.length === 1 ? "solicitação" : "solicitações"}
-          </p>
-        </div>
-
         {avisoTexto && (
-          <p role="alert" className="mb-5 border-l-4 border-amber-600 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p
+            role="alert"
+            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+          >
             {avisoTexto}
           </p>
         )}
 
-        <div className="grid gap-5 lg:grid-cols-3">
-          {columns.map((column) => {
-            const columnColetas = coletas.filter((coleta) => coleta.status === column.status);
+        <nav
+          aria-label="Colunas"
+          className="sticky top-0 z-10 -mx-4 bg-fundo px-4 py-1 sm:-mx-6 sm:px-6 lg:hidden"
+        >
+          <div className="grid grid-cols-3 gap-1 rounded-lg bg-emerald-950/5 p-1">
+            {columns.map((column) => {
+              const active = column.id === activeColumn;
 
-            return (
-              <section key={column.status} aria-labelledby={`column-${column.status}`}>
-                <div className="flex items-center justify-between border-b-2 border-emerald-900 pb-2">
-                  <h3 id={`column-${column.status}`} className="font-semibold text-emerald-950">
+              return (
+                <Link
+                  key={column.id}
+                  href={columnHref(column.id)}
+                  aria-current={active ? "page" : undefined}
+                  className={`rounded-md px-1 py-1.5 text-center text-xs font-semibold transition-colors ${
+                    active
+                      ? "bg-cartao text-emerald-950 shadow-sm"
+                      : "text-neutral-600 hover:text-emerald-950"
+                  }`}
+                >
+                  {column.title}{" "}
+                  <span className="tabular-nums text-neutral-500">{column.total}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+
+        <div className="grid gap-3 lg:min-h-0 lg:flex-1 lg:grid-cols-3 lg:grid-rows-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          {columns.map((column) => (
+            <section
+              key={column.id}
+              aria-labelledby={`titulo-${column.id}`}
+              className={`${
+                column.id === activeColumn ? "flex" : "hidden"
+              } min-w-0 flex-col rounded-xl bg-painel/90 ring-1 ring-borda lg:flex lg:min-h-0`}
+            >
+              {/* No celular a aba já diz qual é a coluna; o título só aparece no monitor. */}
+              <div
+                className={`border-b border-borda px-3 py-2.5 ${
+                  column.id === "disponiveis" ? "" : "hidden lg:block"
+                }`}
+              >
+                <div className="hidden items-center justify-between gap-2 lg:flex">
+                  <h2
+                    id={`titulo-${column.id}`}
+                    className="flex items-center gap-2 text-sm font-semibold text-emerald-950"
+                  >
+                    <span aria-hidden="true" className={`size-2 rounded-full ${column.dot}`} />
                     {column.title}
-                  </h3>
-                  <span className="text-sm tabular-nums text-neutral-600">{columnColetas.length}</span>
+                  </h2>
+                  <span className="rounded-full bg-emerald-950/5 px-2 py-0.5 text-xs font-semibold tabular-nums text-emerald-950">
+                    {column.total}
+                  </span>
                 </div>
 
-                <div className="space-y-3 pt-3">
-                  {columnColetas.map((coleta) => {
-                    const available = coleta.cooperativaId === null;
+                {column.id === "disponiveis" && <FilterForm uf={uf} cidade={cidade} />}
+              </div>
 
-                    return (
-                      <article key={coleta.id} className="border border-neutral-200 bg-white p-4 shadow-sm">
-                        <p className="text-xs font-medium uppercase tracking-wide text-emerald-800">
-                          {coleta.material}
-                        </p>
-                        <p className="mt-2 text-sm font-medium text-neutral-900">
-                          {coleta.cidade && coleta.estado
-                            ? `${coleta.cidade}, ${coleta.estado}`
-                            : "Localização não informada"}
-                        </p>
-                        <p className="mt-2 text-sm text-neutral-700">{coleta.horario}</p>
-                        <p className="mt-1 text-xs text-neutral-500">
-                          Recebida em {coleta.criadoEm.toLocaleDateString("pt-BR")}
-                        </p>
+              {/* Disponíveis fica mais larga no monitor, com dois cards por linha. */}
+              <div
+                className={`grid flex-1 content-start gap-2 p-2 [scrollbar-width:thin] lg:min-h-0 lg:overflow-y-auto ${
+                  column.id === "disponiveis" ? "xl:grid-cols-2" : ""
+                }`}
+              >
+                {column.cards}
 
-                        {!available && (
-                          <dl className="mt-4 space-y-2 border-t border-neutral-200 pt-3 text-sm">
-                            <div>
-                              <dt className="text-xs text-neutral-500">Solicitante</dt>
-                              <dd className="font-medium text-neutral-900">{coleta.nome}</dd>
-                            </div>
-                            <div>
-                              <dt className="text-xs text-neutral-500">Telefone</dt>
-                              <dd className="text-neutral-800">{coleta.telefone}</dd>
-                            </div>
-                            <div>
-                              <dt className="text-xs text-neutral-500">Endereço</dt>
-                              <dd className="text-neutral-800">{coleta.endereco}</dd>
-                            </div>
-                          </dl>
-                        )}
+                {column.cards.length === 0 && (
+                  <p className="rounded-lg border border-dashed border-campo px-3 py-6 text-center text-sm text-neutral-500 xl:col-span-full">
+                    {column.empty}
+                  </p>
+                )}
 
-                        <form action={available ? claimColeta : updateColetaStatus} className="mt-4">
-                          <input type="hidden" name="coletaId" value={coleta.id} />
-                          {available ? (
-                            <button
-                              type="submit"
-                              className="w-full bg-emerald-800 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900"
-                            >
-                              Assumir solicitação
-                            </button>
-                          ) : (
-                            <>
-                              <input
-                                type="hidden"
-                                name="status"
-                                value={column.status === "CONCLUIDA" ? "EM_ANDAMENTO" : "CONCLUIDA"}
-                              />
-                              <button
-                                type="submit"
-                                className="w-full border border-emerald-800 px-3 py-2.5 text-sm font-semibold text-emerald-900 hover:bg-emerald-50"
-                              >
-                                {column.status === "CONCLUIDA" ? "Reabrir coleta" : "Marcar como concluída"}
-                              </button>
-                            </>
-                          )}
-                        </form>
-                      </article>
-                    );
-                  })}
-
-                  {columnColetas.length === 0 && (
-                    <p className="border border-dashed border-neutral-300 px-4 py-6 text-center text-sm text-neutral-500">
-                      Nenhuma solicitação nesta etapa.
-                    </p>
-                  )}
-                </div>
-              </section>
-            );
-          })}
+                {column.note && (
+                  <p className="py-1 text-center text-xs text-neutral-500">{column.note}</p>
+                )}
+              </div>
+            </section>
+          ))}
         </div>
       </div>
     </div>

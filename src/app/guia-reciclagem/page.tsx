@@ -2,8 +2,6 @@ export default function GuiaReciclagemPage() {
   const categorias = [
     {
       titulo: "Computadores, Notebooks e Servidores",
-      cor: "bg-emerald-50 text-emerald-900 border-emerald-200",
-      badge: "bg-emerald-100 text-emerald-800",
       pode: [
         "CPUs completas, gabinetes e servidores desativados",
         "Notebooks, netbooks e ultrabooks",
@@ -15,8 +13,6 @@ export default function GuiaReciclagemPage() {
     },
     {
       titulo: "Periféricos e Acessórios de Escritório",
-      cor: "bg-blue-50 text-blue-900 border-blue-200",
-      badge: "bg-blue-100 text-blue-800",
       pode: [
         "Teclados e mouses (com fio ou wireless)",
         "Monitores de vídeo (LED, LCD e antigos de tubo/CRT)",
@@ -28,8 +24,6 @@ export default function GuiaReciclagemPage() {
     },
     {
       titulo: "Dispositivos Móveis e Telefonia",
-      cor: "bg-purple-50 text-purple-900 border-purple-200",
-      badge: "bg-purple-100 text-purple-900",
       pode: [
         "Smartphones, celulares corporativos e feature phones",
         "Tablets e leitores de e-reader",
@@ -40,8 +34,6 @@ export default function GuiaReciclagemPage() {
     },
     {
       titulo: "Eletrônicos de Consumo (Áudio, Vídeo e Entretenimento)",
-      cor: "bg-indigo-50 text-indigo-900 border-indigo-200",
-      badge: "bg-indigo-100 text-indigo-800",
       pode: [
         "Televisores (Smart TV, LED, LCD, Plasma e Tubo)",
         "Aparelhos de som, caixas de som acústicas e soundbars",
@@ -53,8 +45,6 @@ export default function GuiaReciclagemPage() {
     },
     {
       titulo: "Eletrodomésticos de Pequeno e Médio Porte",
-      cor: "bg-orange-50 text-orange-900 border-orange-200",
-      badge: "bg-orange-100 text-orange-800",
       pode: [
         "Micro-ondas e fornos elétricos de bancada",
         "Liquidificadores, batedeiras, espremedores e processadores de alimentos",
@@ -67,8 +57,6 @@ export default function GuiaReciclagemPage() {
     },
     {
       titulo: "Baterias, No-breaks e Fontes de Energia",
-      cor: "bg-amber-50 text-amber-900 border-amber-200",
-      badge: "bg-amber-100 text-amber-900",
       pode: [
         "Baterias de lítio de notebooks e celulares",
         "No-breaks (UPS) e estabilizadores de tensão",
@@ -79,8 +67,6 @@ export default function GuiaReciclagemPage() {
     },
     {
       titulo: "Cabos, Conectores e Infraestrutura",
-      cor: "bg-slate-100 text-slate-900 border-slate-300",
-      badge: "bg-slate-200 text-slate-900",
       pode: [
         "Cabos de rede (Ethernet/UTP), cabos coaxiais e fibra óptica",
         "Cabos de energia, extensões e réguas de tomadas (filtros de linha)",
@@ -92,7 +78,7 @@ export default function GuiaReciclagemPage() {
   ];
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10">
+    <div className="mx-auto max-w-5xl px-4 py-10">
       <div className="mb-10 text-center sm:text-left">
         <span className="inline-block rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 mb-3">
           Sustentabilidade, Inclusão Social e Economia Circular
@@ -107,17 +93,17 @@ export default function GuiaReciclagemPage() {
         {categorias.map((cat, index) => (
           <div 
             key={index} 
-            className={`rounded-2xl border p-6 shadow-sm transition-all ${cat.cor}`}
+            className="rounded-2xl bg-cartao p-6 shadow-sm ring-1 ring-borda"
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-200/60 pb-4 mb-4">
-              <h2 className="text-2xl font-bold">{cat.titulo}</h2>
-              <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold w-fit ${cat.badge}`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-borda pb-4 mb-4">
+              <h2 className="text-xl font-bold text-neutral-900 sm:text-2xl">{cat.titulo}</h2>
+              <span className="inline-flex w-fit items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
                 Categoria de Resíduo
               </span>
             </div>
 
             {/* O que pode */}
-            <div className="bg-white/90 backdrop-blur rounded-xl p-5 border border-neutral-200/50">
+            <div className="rounded-xl bg-painel p-5">
               <h3 className="font-semibold text-emerald-700 flex items-center gap-2 mb-3">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-xs">✓</span>
                 O que pode ser reciclado / reaproveitado:
@@ -133,13 +119,13 @@ export default function GuiaReciclagemPage() {
             </div>
 
             {/* Dica Prática */}
-            <div className="mt-4 bg-white/70 rounded-lg p-3 text-xs sm:text-sm text-neutral-700 border border-neutral-200/40 flex items-center gap-2">
-              <span className="font-bold text-neutral-900">🌿 Boas Práticas:</span>
+            <div className="mt-4 flex items-start gap-2 rounded-lg border border-borda p-3 text-xs text-neutral-700 sm:text-sm">
+              <span className="shrink-0 whitespace-nowrap font-bold text-neutral-900">🌿 Boas Práticas:</span>
               <span>{cat.dica}</span>
             </div>
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

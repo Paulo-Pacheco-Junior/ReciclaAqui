@@ -31,7 +31,7 @@ export default function Mapa({ cooperativas }: MapaProps) {
   const centroPadrao: [number, number] = [-30.0346, -51.2177];
 
   return (
-    <div className="mb-12 overflow-hidden rounded-2xl border border-neutral-200 shadow-md h-[400px] w-full z-0 relative">
+    <div className="mb-12 overflow-hidden rounded-2xl border border-borda shadow-md h-[400px] w-full z-0 relative">
       <MapContainer
         center={centroPadrao}
         zoom={11}

@@ -1,8 +1,10 @@
 import { getPrismaClient } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { connection } from "next/server";
+import { cache } from "react";
 
-export async function getCurrentCooperativa() {
+// `cache` faz o header e a página dividirem a mesma consulta em cada acesso.
+export const getCurrentCooperativa = cache(async () => {
   await connection();
 
   if (
@@ -23,4 +25,4 @@ export async function getCurrentCooperativa() {
   return getPrismaClient().cooperativa.findUnique({
     where: { authUserId },
   });
-}
+});

@@ -1,18 +1,31 @@
 @import "leaflet/dist/leaflet.css";
 @import "tailwindcss";
 
+/*
+  Paleta do site, em um só lugar. Tons de verde-acinzentado em vez de branco puro,
+  para não cansar a vista. Viram classes do Tailwind: bg-fundo, bg-cartao,
+  bg-painel, border-borda, ring-borda, border-campo.
+  A cor principal (botões, links, destaques) é o emerald do próprio Tailwind:
+  emerald-700 nos botões e emerald-800 no hover. Avisos usam amber; erros, red.
+*/
+@theme {
+  --color-fundo: #dfe6da; /* fundo das páginas */
+  --color-painel: #e9eee5; /* áreas internas: colunas do painel, caixas de destaque */
+  --color-cartao: #f3f6f0; /* cartões, formulários e campos */
+  --color-borda: #cdd6c6; /* bordas e divisórias */
+  --color-campo: #b4bfad; /* borda dos campos de formulário */
+}
+
 :root {
-  --background: #b7d39a;
   --foreground: #1c2b1a;
+  /* Altura fixa do header no monitor; o painel usa para ocupar o resto da tela. */
+  --header-height: 4.25rem;
 }
 
 body {
-  background-color: var(--background);
-  background-image: linear-gradient(
-    180deg,
-    #9fc47a 0%,
-    #b7d39a 50%,
-    #a8c986 100%
-  );
+  background-color: var(--color-fundo);
+  /* Ícones do tema bem apagados, repetidos pelo fundo. */
+  background-image: url("/fundo-reciclagem.svg");
+  background-size: 320px;
   color: var(--foreground);
 }

@@ -31,7 +31,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         </p>
       </section>
 
-      <section className="border-l border-emerald-950/15 bg-white/75 px-6 py-8 shadow-sm sm:px-9">
+      <section className="rounded-xl bg-cartao px-6 py-8 shadow-sm ring-1 ring-borda sm:px-9">
         <h2 className="text-2xl font-semibold text-emerald-950">
           {isSignup ? "Cadastrar cooperativa" : "Entrar"}
         </h2>
@@ -47,7 +47,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 autoComplete="organization"
                 required
                 minLength={2}
-                className="w-full border border-neutral-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                className="w-full rounded-lg border border-campo bg-cartao px-3 py-2.5 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
               />
             </div>
           )}
@@ -61,7 +61,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               type="email"
               autoComplete="email"
               required
-              className="w-full border border-neutral-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+              className="w-full rounded-lg border border-campo bg-cartao px-3 py-2.5 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
             />
           </div>
           <div className="space-y-1.5">
@@ -75,7 +75,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               autoComplete={isSignup ? "new-password" : "current-password"}
               required
               minLength={isSignup ? 8 : undefined}
-              className="w-full border border-neutral-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+              className="w-full rounded-lg border border-campo bg-cartao px-3 py-2.5 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
             />
             {isSignup && (
               <p className="text-xs text-neutral-600">Use pelo menos 8 caracteres.</p>
@@ -94,7 +94,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           <button
             type="submit"
             disabled={isPending}
-            className="w-full bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-900 disabled:cursor-wait disabled:opacity-60"
+            className="w-full rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60"
           >
             {isPending
               ? "Aguarde..."

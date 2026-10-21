@@ -1,74 +1,91 @@
 "use server";
 
+import type { Prisma } from "@/generated/prisma/client";
 import { getCurrentCooperativa } from "@/lib/cooperativa";
 import { getPrismaClient } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+
+type Aviso = "ocupada" | "erro";
 
 function getColetaId(formData: FormData) {
   const value = formData.get("coletaId");
   return typeof value === "string" ? value.trim() : "";
 }
 
-export async function claimColeta(formData: FormData) {
+async function requireCooperativa() {
   const cooperativa = await getCurrentCooperativa();
-  const coletaId = getColetaId(formData);
 
-  if (!cooperativa || !coletaId) {
+  if (!cooperativa) {
     redirect("/login");
   }
 
-  let result;
+  return cooperativa;
+}
 
-  try {
-    result = await getPrismaClient().coleta.updateMany({
-      where: {
-        id: coletaId,
-        cooperativaId: null,
-        status: "PENDENTE",
-      },
-      data: {
-        cooperativaId: cooperativa.id,
-        status: "EM_ANDAMENTO",
-      },
-    });
-  } catch {
-    redirect("/kanban?aviso=erro");
+// O aviso fica num cookie de poucos segundos: aparece uma vez e some sozinho.
+async function setAviso(aviso: Aviso | null) {
+  const cookieStore = await cookies();
+
+  if (aviso) {
+    cookieStore.set("aviso", aviso, { maxAge: 10, httpOnly: true, sameSite: "lax" });
+  } else {
+    cookieStore.delete("aviso");
   }
+}
 
-  if (result.count === 0) {
-    redirect("/kanban?aviso=ocupada");
+// Só altera a coleta se ela ainda estiver como `where` espera; assim duas
+// cooperativas nunca pegam a mesma solicitação.
+async function moveColeta(
+  where: Prisma.ColetaWhereInput,
+  data: Prisma.ColetaUncheckedUpdateManyInput,
+  avisoIfUnchanged: Aviso,
+) {
+  try {
+    const { count } = await getPrismaClient().coleta.updateMany({ where, data });
+    await setAviso(count === 0 ? avisoIfUnchanged : null);
+  } catch {
+    await setAviso("erro");
   }
 
   revalidatePath("/kanban");
 }
 
+export async function claimColeta(formData: FormData) {
+  const cooperativa = await requireCooperativa();
+
+  await moveColeta(
+    { id: getColetaId(formData), cooperativaId: null, status: "PENDENTE" },
+    { cooperativaId: cooperativa.id, status: "EM_ANDAMENTO" },
+    "ocupada",
+  );
+}
+
 export async function updateColetaStatus(formData: FormData) {
-  const cooperativa = await getCurrentCooperativa();
-  const coletaId = getColetaId(formData);
+  const cooperativa = await requireCooperativa();
   const nextStatus = formData.get("status");
 
-  if (!cooperativa || !coletaId) {
-    redirect("/login");
-  }
-
   if (nextStatus !== "EM_ANDAMENTO" && nextStatus !== "CONCLUIDA") {
-    redirect("/kanban?aviso=erro");
+    await setAviso("erro");
+    return;
   }
 
   const currentStatus = nextStatus === "CONCLUIDA" ? "EM_ANDAMENTO" : "CONCLUIDA";
-  const result = await getPrismaClient().coleta.updateMany({
-    where: {
-      id: coletaId,
-      cooperativaId: cooperativa.id,
-      status: currentStatus,
-    },
-    data: { status: nextStatus },
-  });
 
-  if (result.count === 0) {
-    redirect("/kanban?aviso=erro");
-  }
+  await moveColeta(
+    { id: getColetaId(formData), cooperativaId: cooperativa.id, status: currentStatus },
+    { status: nextStatus },
+    "erro",
+  );
+}
 
-  revalidatePath("/kanban");
+export async function releaseColeta(formData: FormData) {
+  const cooperativa = await requireCooperativa();
+
+  await moveColeta(
+    { id: getColetaId(formData), cooperativaId: cooperativa.id, status: "EM_ANDAMENTO" },
+    { cooperativaId: null, status: "PENDENTE" },
+    "erro",
+  );
 }
