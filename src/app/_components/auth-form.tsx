@@ -6,9 +6,10 @@ import { signIn, signUp, type AuthFormState } from "@/app/actions/auth";
 
 type AuthFormProps = {
   mode: "login" | "signup";
+  inviteToken?: string;
 };
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, inviteToken = "" }: AuthFormProps) {
   const isSignup = mode === "signup";
   const [state, formAction, isPending] = useActionState<AuthFormState, FormData>(
     isSignup ? signUp : signIn,
@@ -36,6 +37,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           {isSignup ? "Cadastrar cooperativa" : "Entrar"}
         </h2>
         <form action={formAction} className="mt-7 space-y-5">
+          {isSignup && <input type="hidden" name="convite" value={inviteToken} />}
           {isSignup && (
             <div className="space-y-1.5">
               <label htmlFor="nome" className="text-sm font-medium text-neutral-800">

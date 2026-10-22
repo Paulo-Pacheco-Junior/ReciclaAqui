@@ -28,9 +28,31 @@ model Coleta {
 model Cooperativa {
   id         String   @id @default(cuid())
   authUserId String   @unique
+  email      String?  @unique
   nome       String
   criadoEm   DateTime @default(now())
   coletas    Coleta[]
+}
+
+model CooperativaConvite {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  tokenHash String   @unique
+  criadoEm  DateTime @default(now())
+  expiraEm  DateTime
+  usadoEm   DateTime?
+}
+
+model PontoColeta {
+  id       String @id @default(cuid())
+  nome     String
+  endereco String
+  cidade   String
+  estado   String
+  telefone String?
+  latitude Float
+  longitude Float
+  criadoEm DateTime @default(now())
 }
 
 enum StatusColeta {

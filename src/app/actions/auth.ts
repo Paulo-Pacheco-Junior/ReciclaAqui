@@ -1,7 +1,10 @@
 "use server";
 
 import { getPrismaClient } from "@/lib/prisma";
+import { isAdminEmail } from "@/lib/admin";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createHash } from "node:crypto";
 import { redirect } from "next/navigation";
 
 export type AuthFormState = {
@@ -23,14 +26,6 @@ function isSupabaseConfigured() {
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   );
-}
-
-async function saveCooperativa(authUserId: string, nome: string) {
-  await getPrismaClient().cooperativa.upsert({
-    where: { authUserId },
-    create: { authUserId, nome },
-    update: { nome },
-  });
 }
 
 export async function signIn(
@@ -58,13 +53,10 @@ export async function signIn(
     return { error: "E-mail ou senha inválidos." };
   }
 
-  const metadataName = data.user.user_metadata.cooperativa_nome;
-  const nome =
-    typeof metadataName === "string" && metadataName.trim()
-      ? metadataName.trim()
-      : email;
+  if (isAdminEmail(email)) {
+    redirect("/admin");
+  }
 
-  await saveCooperativa(data.user.id, nome);
   redirect("/kanban");
 }
 
@@ -75,6 +67,11 @@ export async function signUp(
   const nome = getField(formData, "nome");
   const email = getField(formData, "email").toLowerCase();
   const password = getField(formData, "password");
+  const inviteToken = getField(formData, "convite");
+
+  if (!inviteToken) {
+    return { error: "Você ainda não foi convidado, solicite um convite ao administrador" };
+  }
 
   if (nome.length < 2 || !validEmail(email) || password.length < 8) {
     return {
@@ -86,37 +83,69 @@ export async function signUp(
     return { error: "Configure a URL e a chave pública do Supabase no arquivo .env.local." };
   }
 
-  const supabase = await createClient();
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000")
-    .replace(/\/$/, "");
-  const { data, error } = await supabase.auth.signUp({
+  const prisma = getPrismaClient();
+  const invite = inviteToken
+    ? await prisma.cooperativaConvite.findUnique({
+        where: { tokenHash: createHash("sha256").update(inviteToken).digest("hex") },
+      })
+    : null;
+
+  if (
+    !invite ||
+    invite.email !== email ||
+    invite.usadoEm ||
+    invite.expiraEm <= new Date()
+  ) {
+    return { error: "Você ainda não foi convidado, solicite um convite ao administrador" };
+  }
+
+  const reservation = await prisma.cooperativaConvite.updateMany({
+    where: { id: invite.id, usadoEm: null, expiraEm: { gt: new Date() } },
+    data: { usadoEm: new Date() },
+  });
+  if (reservation.count !== 1) {
+    return { error: "Este convite já foi utilizado ou expirou. Solicite um novo ao administrador." };
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseSecret = process.env.SUPABASE_SECRET_KEY;
+  if (!supabaseUrl || !supabaseSecret) {
+    await prisma.cooperativaConvite.update({ where: { id: invite.id }, data: { usadoEm: null } });
+    return { error: "Configure a chave secreta do Supabase no servidor." };
+  }
+
+  const adminClient = createSupabaseClient(supabaseUrl, supabaseSecret, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data, error } = await adminClient.auth.admin.createUser({
     email,
     password,
-    options: {
-      data: { cooperativa_nome: nome },
-      emailRedirectTo: `${siteUrl}/auth/callback?next=/kanban`,
-    },
+    email_confirm: true,
+    user_metadata: { cooperativa_nome: nome },
   });
 
-  if (error) {
+  if (error || !data.user) {
+    await prisma.cooperativaConvite.update({ where: { id: invite.id }, data: { usadoEm: null } });
     return { error: "Não foi possível criar a conta. Confira os dados e tente novamente." };
   }
 
-  if (!data.user || data.user.identities?.length === 0) {
-    return {
-      message: "Se o e-mail puder ser cadastrado, você receberá uma mensagem para confirmar a conta.",
-    };
+  try {
+    await prisma.cooperativa.create({
+      data: { authUserId: data.user.id, email, nome },
+    });
+  } catch {
+    await adminClient.auth.admin.deleteUser(data.user.id);
+    await prisma.cooperativaConvite.update({ where: { id: invite.id }, data: { usadoEm: null } });
+    return { error: "Não foi possível finalizar o cadastro. Tente novamente." };
   }
 
-  await saveCooperativa(data.user.id, nome);
-
-  if (data.session) {
-    redirect("/kanban");
+  const supabase = await createClient();
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+  if (signInError) {
+    return { message: "Conta criada. Entre com seu e-mail e senha para continuar." };
   }
 
-  return {
-    message: "Cadastro iniciado. Confira seu e-mail para confirmar a conta e entrar.",
-  };
+  redirect("/kanban");
 }
 
 export async function signOut() {

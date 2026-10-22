@@ -1,5 +1,10 @@
 import { AuthForm } from "@/app/_components/auth-form";
 
-export default function CadastroPage() {
-  return <AuthForm mode="signup" />;
+type CadastroPageProps = {
+  searchParams: Promise<{ convite?: string }>;
+};
+
+export default async function CadastroPage({ searchParams }: CadastroPageProps) {
+  const { convite } = await searchParams;
+  return <AuthForm mode="signup" inviteToken={convite} />;
 }

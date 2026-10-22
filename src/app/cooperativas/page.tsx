@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { MapIcon, PhoneIcon, PinIcon } from "@/components/icons";
 
@@ -8,6 +8,7 @@ import { MapIcon, PhoneIcon, PinIcon } from "@/components/icons";
 const MapaDinamico = dynamic(() => import("./Mapa"), { ssr: false });
 
 interface Cooperativa {
+  id?: string;
   nome: string;
   endereco: string;
   cidade: string;
@@ -267,8 +268,20 @@ const cooperativas: Cooperativa[] = [
 
 export default function CooperativasPage() {
   const [busca, setBusca] = useState("");
+  const [pontos, setPontos] = useState<Cooperativa[]>([]);
 
-  const cooperativasFiltradas = cooperativas.filter((item) => {
+  useEffect(() => {
+    fetch("/api/pontos")
+      .then((response) => response.ok ? response.json() : [])
+      .then((items: Array<Omit<Cooperativa, "lat" | "lng"> & { latitude: number; longitude: number }>) => {
+        setPontos(items.map((item) => ({ ...item, lat: item.latitude, lng: item.longitude })));
+      })
+      .catch(() => setPontos([]));
+  }, []);
+
+  const todosPontos = [...cooperativas, ...pontos];
+
+  const cooperativasFiltradas = todosPontos.filter((item) => {
     const termo = busca.toLowerCase();
     const cidadeMatch = item.cidade.toLowerCase().includes(termo);
     const estadoMatch = item.estado.toLowerCase().includes(termo);

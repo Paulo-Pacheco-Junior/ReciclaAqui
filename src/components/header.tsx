@@ -1,12 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/app/actions/auth";
+import { getCurrentAdmin } from "@/lib/admin";
 import { getCurrentCooperativa } from "@/lib/cooperativa";
 import { NavLinks } from "./nav-links";
 
 export async function Header() {
   // Se o banco estiver fora do ar, o site público continua abrindo.
-  const cooperativa = await getCurrentCooperativa().catch(() => null);
+  const [cooperativa, admin] = await Promise.all([
+    getCurrentCooperativa().catch(() => null),
+    getCurrentAdmin().catch(() => null),
+  ]);
 
   return (
     <header className="border-b border-borda bg-cartao/85 px-4 backdrop-blur sm:px-6 lg:h-[var(--header-height)] lg:px-8">
@@ -30,7 +34,7 @@ export async function Header() {
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3 lg:ml-0">
-          {cooperativa ? (
+          {cooperativa || admin ? (
             <>
               <form action={signOut}>
                 <button
@@ -42,10 +46,10 @@ export async function Header() {
               </form>
 
               <Link
-                href="/kanban"
+                href={admin ? "/admin" : "/kanban"}
                 className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-800 sm:px-4"
               >
-                Painel
+                {admin ? "Administração" : "Painel"}
               </Link>
             </>
           ) : (

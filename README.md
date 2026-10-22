@@ -43,6 +43,12 @@ NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 
 Encontre a URL e a chave publishable nos dados da API do projeto Supabase. Em **Authentication > URL Configuration**, adicione `http://localhost:3000/auth/callback` como URL de redirecionamento permitida. Para aplicar as migrations pendentes no banco remoto, use `npx prisma migrate deploy`.
 
+## Administração e convites
+
+Crie cada usuário administrador em **Supabase > Authentication > Users** e defina `ADMIN_EMAILS` como uma lista de e-mails separados por vírgula, sem espaços obrigatórios. Configure também `SUPABASE_SECRET_KEY` com a chave secreta do projeto Supabase. Mantenha essa chave apenas no servidor, sem o prefixo `NEXT_PUBLIC_`. O administrador entra pela rota `/login`; após autenticar, acessa `/admin` para convidar cooperativas, gerenciar pontos de coleta e acompanhar solicitações. O link de convite é válido por 7 dias, vinculado ao e-mail convidado e só pode ser usado uma vez. A variável antiga `ADMIN_EMAIL` continua aceita para preservar a configuração existente.
+
+Depois de configurar as variáveis, aplique a migration no ambiente: `npx prisma migrate deploy`.
+
 ## Andamento do Projeto
 
 Rascunho (para finalizar):
